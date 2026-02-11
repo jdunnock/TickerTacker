@@ -90,6 +90,27 @@
             align-items: center;
         }
 
+        .auth-actions {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .auth-actions form {
+            margin: 0;
+        }
+
+        .auth-actions .btn-link {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(207, 233, 255, 0.7);
+            color: var(--steel-700);
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         .top-nav a {
             display: inline-flex;
             align-items: center;
@@ -368,19 +389,33 @@
                 <h1>📊 Ticker Tracker</h1>
                 <span>Ice-blue market cockpit</span>
             </div>
-            <nav class="top-nav" aria-label="Primary">
+            <div class="top-nav" aria-label="Primary">
+                {% if current_user %}
                 <a href="/dashboard" class="{% if current_page == 'dashboard' %}active{% endif %}">📋 Watchlist</a>
                 <a href="/detail" class="{% if current_page == 'detail' %}active{% endif %}">📈 Detail</a>
-            </nav>
+                {% endif %}
+            </div>
+            <div class="auth-actions">
+                {% if current_user %}
+                <form method="POST" action="/logout">
+                    <button class="btn-link" type="submit">Log out</button>
+                </form>
+                {% else %}
+                <a class="btn btn-ghost" href="/login">Log in</a>
+                <a class="btn btn-primary" href="/register">Create account</a>
+                {% endif %}
+            </div>
         </div>
     </header>
     <main>
         {% block content %}{% endblock %}
     </main>
+    {% if current_user %}
     <nav class="bottom-nav" aria-label="Primary">
         <a href="/dashboard" class="{% if current_page == 'dashboard' %}active{% endif %}">📋 Watchlist</a>
         <a href="/detail" class="{% if current_page == 'detail' %}active{% endif %}">📈 Detail</a>
     </nav>
+    {% endif %}
 </body>
 
 </html>

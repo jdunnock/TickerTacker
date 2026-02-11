@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Log In - Ticker Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-wrap {
+        max-width: 520px;
+        margin: 0 auto;
+    }
+
+    .auth-card {
+        margin-top: 24px;
+        display: grid;
+        gap: 16px;
+    }
+
+    .auth-footer {
+        font-size: 13px;
+        color: #6b7a8b;
+    }
+
+    .auth-footer a {
+        color: #1f5fe6;
+        text-decoration: none;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap fade-in">
+    <h2>Welcome back</h2>
+    <p class="helper">Log in to see your watchlist.</p>
+
+    <form method="POST" action="/login" class="card auth-card">
+        {% if error %}
+        <div class="notice"
+            style="background: rgba(254, 226, 226, 0.7); color: #991b1b; border: 1px solid rgba(248, 113, 113, 0.3);">
+            {{ error }}
+        </div>
+        {% endif %}
+        <div class="field-row">
+            <label class="field-label" for="email">Email</label>
+            <input class="input" type="email" id="email" name="email" required autocomplete="email" />
+        </div>
+        <div class="field-row">
+            <label class="field-label" for="password">Password</label>
+            <input class="input" type="password" id="password" name="password" required
+                autocomplete="current-password" />
+        </div>
+        <button class="btn btn-primary" type="submit">Log in</button>
+        <div class="auth-footer">New here? <a href="/register">Create an account</a></div>
+    </form>
+</div>
+{% endblock %}

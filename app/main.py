@@ -6,14 +6,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from starlette.requests import Request
 from datetime import datetime, timedelta, time
+import secrets
 from zoneinfo import ZoneInfo
 import os
 
 from app.db import engine, SessionLocal
-from app.models import Base, Watchlist, Price, Instrument
+from app.models import Base, Watchlist, Price, Instrument, User, UserSession
 from app.providers.yfinance import YFinanceProvider
 from app.providers.finnhub import FinnhubProvider
+from app.providers.stocktwits import StocktwitsProvider
 from app.services.pricing import PricingService
+from app.utils import hash_password, verify_password
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -24,6 +27,9 @@ QUOTE_CACHE_TTL = timedelta(seconds=45)
 QUOTE_CACHE: dict[str, tuple[datetime, float]] = {}
 LAST_DISPLAY_CACHE: dict[str, float] = {}
 ANALYST_NOTE_CACHE: dict[str, tuple[datetime.date, dict]] = {}
+
+SESSION_COOKIE = "tt_session"
+SESSION_TTL = timedelta(days=30)
 
 # Mount static files
 app.mount(
@@ -47,17 +53,28 @@ def get_db() -> Session:
         db.close()
 
 
-def get_owner(request: Request, response: Response | None = None) -> str:
-    owner = request.cookies.get("tt_owner") or "user1"
-    if response is not None and request.cookies.get("tt_owner") is None:
-        response.set_cookie(
-            "tt_owner",
-            owner,
-            max_age=60 * 60 * 24 * 365,
-            httponly=True,
-            samesite="lax",
-        )
-    return owner
+def get_current_user(request: Request, db: Session) -> User | None:
+    session_id = request.cookies.get(SESSION_COOKIE)
+    if not session_id:
+        return None
+    session = db.query(UserSession).filter(UserSession.id == session_id).first()
+    if not session:
+        return None
+    if session.expires_at < datetime.utcnow():
+        db.delete(session)
+        db.commit()
+        return None
+    return session.user
+
+
+def set_session_cookie(response: Response, session_id: str) -> None:
+    response.set_cookie(
+        SESSION_COOKIE,
+        session_id,
+        max_age=int(SESSION_TTL.total_seconds()),
+        httponly=True,
+        samesite="lax",
+    )
 
 
 def compute_sma(values: list[float], period: int) -> float | None:
@@ -304,11 +321,156 @@ def home():
     return RedirectResponse(url="/dashboard", status_code=302)
 
 
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
+    if current_user:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "current_user": None,
+            "error": None,
+        },
+    )
+
+
+@app.post("/login", response_class=HTMLResponse)
+async def login(request: Request, db: Session = Depends(get_db)):
+    form_data = await request.form()
+    email = (form_data.get("email") or "").strip().lower()
+    password = form_data.get("password") or ""
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not verify_password(password, user.password_hash):
+        return templates.TemplateResponse(
+            "login.html",
+            {
+                "request": request,
+                "current_user": None,
+                "error": "Invalid email or password.",
+            },
+            status_code=400,
+        )
+
+    session_id = secrets.token_urlsafe(32)
+    session = UserSession(
+        id=session_id,
+        user_id=user.id,
+        expires_at=datetime.utcnow() + SESSION_TTL,
+    )
+    db.add(session)
+    db.commit()
+
+    response = RedirectResponse(url="/dashboard", status_code=303)
+    set_session_cookie(response, session_id)
+    return response
+
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
+    if current_user:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    return templates.TemplateResponse(
+        "register.html",
+        {
+            "request": request,
+            "current_user": None,
+            "error": None,
+        },
+    )
+
+
+@app.post("/register", response_class=HTMLResponse)
+async def register(request: Request, db: Session = Depends(get_db)):
+    form_data = await request.form()
+    email = (form_data.get("email") or "").strip().lower()
+    password = form_data.get("password") or ""
+
+    if not email or "@" not in email:
+        return templates.TemplateResponse(
+            "register.html",
+            {
+                "request": request,
+                "current_user": None,
+                "error": "Please enter a valid email address.",
+            },
+            status_code=400,
+        )
+    if len(password) < 8:
+        return templates.TemplateResponse(
+            "register.html",
+            {
+                "request": request,
+                "current_user": None,
+                "error": "Password must be at least 8 characters.",
+            },
+            status_code=400,
+        )
+    if len(password.encode("utf-8")) > 72:
+        return templates.TemplateResponse(
+            "register.html",
+            {
+                "request": request,
+                "current_user": None,
+                "error": "Password must be at most 72 bytes.",
+            },
+            status_code=400,
+        )
+
+    existing = db.query(User).filter(User.email == email).first()
+    if existing:
+        return templates.TemplateResponse(
+            "register.html",
+            {
+                "request": request,
+                "current_user": None,
+                "error": "Email already registered.",
+            },
+            status_code=400,
+        )
+
+    user = User(email=email, password_hash=hash_password(password))
+    db.add(user)
+    db.commit()
+
+    session_id = secrets.token_urlsafe(32)
+    session = UserSession(
+        id=session_id,
+        user_id=user.id,
+        expires_at=datetime.utcnow() + SESSION_TTL,
+    )
+    db.add(session)
+    db.commit()
+
+    response = RedirectResponse(url="/dashboard", status_code=303)
+    set_session_cookie(response, session_id)
+    return response
+
+
+@app.post("/logout")
+def logout(request: Request, db: Session = Depends(get_db)):
+    session_id = request.cookies.get(SESSION_COOKIE)
+    if session_id:
+        session = db.query(UserSession).filter(UserSession.id == session_id).first()
+        if session:
+            db.delete(session)
+            db.commit()
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(SESSION_COOKIE)
+    return response
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, db: Session = Depends(get_db)):
     """Render dashboard with watchlist - refreshes prices on page load."""
     response = None
-    owner = get_owner(request)
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+    owner = current_user.id
     # Refresh prices from provider on page load
     try:
         provider = YFinanceProvider()
@@ -329,9 +491,9 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
             "watchlist": watchlist_with_prices,
             "watchlist_cleared": request.query_params.get("cleared") == "1",
             "current_page": "dashboard",
+            "current_user": current_user,
         },
     )
-    get_owner(request, response)
     return response
 
 
@@ -339,7 +501,10 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
 async def ticker_detail(request: Request, db: Session = Depends(get_db)):
     """Render ticker detail view for charts and analysis."""
     response = None
-    owner = get_owner(request)
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+    owner = current_user.id
     provider = YFinanceProvider()
     watchlist_with_prices = await build_watchlist_with_prices(db, provider, owner)
 
@@ -349,19 +514,23 @@ async def ticker_detail(request: Request, db: Session = Depends(get_db)):
             "request": request,
             "watchlist": watchlist_with_prices,
             "current_page": "detail",
+            "current_user": current_user,
         },
     )
-    get_owner(request, response)
     return response
 
 
 @app.get("/add-instruments", response_class=HTMLResponse)
-def add_instruments_page(request: Request):
+def add_instruments_page(request: Request, db: Session = Depends(get_db)):
     """Show page to add instruments to watchlist."""
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
     return templates.TemplateResponse(
         "add_instruments.html",
         {
             "request": request,
+            "current_user": current_user,
         },
     )
 
@@ -373,6 +542,9 @@ async def add_instruments(
     db: Session = Depends(get_db),
 ):
     """Add selected instruments to watchlist."""
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
     # Get form data
     form_data = await request.form()
     form_symbols = form_data.getlist("symbols")
@@ -393,7 +565,7 @@ async def add_instruments(
 
     added_count = 0
     response: RedirectResponse | None = None
-    owner = get_owner(request)
+    owner = current_user.id
     provider = None
     try:
         provider = YFinanceProvider()
@@ -406,7 +578,10 @@ async def add_instruments(
             # Add to watchlist if not already there
             watchlist_item = (
                 db.query(Watchlist)
-                .filter(Watchlist.instrument_id == existing.id)
+                .filter(
+                    Watchlist.instrument_id == existing.id,
+                    Watchlist.owner == owner,
+                )
                 .first()
             )
             if not watchlist_item:
@@ -430,7 +605,6 @@ async def add_instruments(
 
     # Redirect to dashboard
     response = RedirectResponse(url="/dashboard", status_code=303)
-    get_owner(request, response)
     return response
 
 
@@ -438,7 +612,10 @@ async def add_instruments(
 async def refresh_prices(request: Request, db: Session = Depends(get_db)):
     """Refresh prices and return updated watchlist table (HTMX endpoint)."""
     response = None
-    owner = get_owner(request)
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+    owner = current_user.id
     # Use PricingService to update prices from provider
     provider = YFinanceProvider()
     service = PricingService(db, provider)
@@ -460,26 +637,33 @@ async def refresh_prices(request: Request, db: Session = Depends(get_db)):
         {
             "request": request,
             "watchlist": watchlist_with_prices,
+            "current_user": current_user,
         },
     )
-    get_owner(request, response)
     return response
 
 
 @app.post("/api/watchlist/clear")
 def clear_watchlist(request: Request, db: Session = Depends(get_db)):
     """Clear all items from the watchlist."""
-    owner = get_owner(request)
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+    owner = current_user.id
     db.query(Watchlist).filter(Watchlist.owner == owner).delete()
     db.commit()
     response = RedirectResponse(url="/dashboard?cleared=1", status_code=303)
-    get_owner(request, response)
     return response
 
 
 @app.get("/api/prices/history")
-async def price_history(symbol: str, range: str = "6m", db: Session = Depends(get_db)):
+async def price_history(
+    request: Request, symbol: str, range: str = "6m", db: Session = Depends(get_db)
+):
     """Return recent close prices for a symbol."""
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
     symbol = (symbol or "").strip().upper()
     if not symbol:
         return JSONResponse({"symbol": "", "prices": []})
@@ -671,7 +855,12 @@ async def price_history(symbol: str, range: str = "6m", db: Session = Depends(ge
 
 
 @app.get("/api/analysis")
-async def price_analysis(symbol: str, db: Session = Depends(get_db)):
+async def price_analysis(
+    request: Request, symbol: str, db: Session = Depends(get_db)
+):
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
     symbol = (symbol or "").strip().upper()
     if not symbol:
         return JSONResponse({"symbol": "", "fundamentals": {}, "technicals": {}})

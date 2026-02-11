@@ -9,6 +9,7 @@ aiohttp
 yfinance
 python-multipart
 python-dotenv
+passlib[bcrypt]
 ruff
 pytest
 httpx
