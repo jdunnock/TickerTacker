@@ -224,7 +224,9 @@
     {% endif %}
 
     <div class="watchlist-panel panel">
-        <div id="watchlist-table" hx-post="/api/prices/refresh" hx-trigger="load, every 15s" hx-swap="innerHTML">
+        <div id="watchlist-table" data-cache-key="watchlist-{{ current_user.id }}"
+            data-cache-ts-key="watchlist-ts-{{ current_user.id }}" hx-post="/api/prices/refresh"
+            hx-trigger="load, every 15s" hx-swap="innerHTML">
             {% if watchlist %}
             <table class="watchlist-table frosted-head">
                 <thead>
@@ -285,6 +287,9 @@
         var tableContainer = document.getElementById("watchlist-table");
         var clearForm = document.getElementById("clear-watchlist");
         var watchlistCleared = document.getElementById("watchlist-cleared");
+        var cacheKey = tableContainer ? tableContainer.dataset.cacheKey : null;
+        var cacheTsKey = tableContainer ? tableContainer.dataset.cacheTsKey : null;
+        var cacheMaxAgeMs = 5 * 60 * 1000;
 
         function goToDetail(symbol) {
             if (!symbol) {
@@ -294,10 +299,40 @@
             window.location.href = "/detail?symbol=" + encodeURIComponent(symbol);
         }
 
+        function restoreCache() {
+            if (!tableContainer || !cacheKey || !cacheTsKey) {
+                return;
+            }
+            var cachedHtml = localStorage.getItem(cacheKey);
+            var cachedTs = Number(localStorage.getItem(cacheTsKey) || "0");
+            if (!cachedHtml || !cachedTs) {
+                return;
+            }
+            if (Date.now() - cachedTs > cacheMaxAgeMs) {
+                return;
+            }
+            tableContainer.innerHTML = cachedHtml;
+        }
+
+        function storeCache() {
+            if (!tableContainer || !cacheKey || !cacheTsKey) {
+                return;
+            }
+            localStorage.setItem(cacheKey, tableContainer.innerHTML);
+            localStorage.setItem(cacheTsKey, String(Date.now()));
+        }
+
         if (clearForm) {
             clearForm.addEventListener("submit", function (event) {
                 if (!confirm("Clear all instruments from the watchlist?")) {
                     event.preventDefault();
+                    return;
+                }
+                if (cacheKey) {
+                    localStorage.removeItem(cacheKey);
+                }
+                if (cacheTsKey) {
+                    localStorage.removeItem(cacheTsKey);
                 }
             });
         }
@@ -320,11 +355,14 @@
 
         document.body.addEventListener("htmx:afterSwap", function (event) {
             if (event.target && event.target.id === "watchlist-table") {
+                storeCache();
                 event.target.classList.remove("watchlist-refresh");
                 void event.target.offsetWidth;
                 event.target.classList.add("watchlist-refresh");
             }
         });
+
+        restoreCache();
     })();
 </script>
 {% endblock %}

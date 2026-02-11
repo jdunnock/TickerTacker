@@ -229,9 +229,7 @@ def build_analyst_note(
 
     twits_sentence = ""
     if twits_headlines:
-        twits_sentence = "Stocktwits highlights: %s." % "; ".join(
-            twits_headlines[:2]
-        )
+        twits_sentence = "Stocktwits highlights: %s." % "; ".join(twits_headlines[:2])
 
     parts = [valuation_sentence, trend_sentence, news_sentence]
     if sentiment_sentence:
@@ -686,7 +684,7 @@ async def price_history(
                 print(
                     f"Intraday {symbol} interval={used_interval} points={len(bars)} range={first_ts}..{last_ts}"
                 )
-            
+
             market_tz = None
             open_time = None
             close_time = None
@@ -795,7 +793,9 @@ async def price_history(
                     "c": float(bar.close),
                     "v": float(bar.volume) if bar.volume is not None else None,
                 }
-                for bar, local_ts in (localized_bars or [(bar, bar.timestamp) for bar in bars])
+                for bar, local_ts in (
+                    localized_bars or [(bar, bar.timestamp) for bar in bars]
+                )
             ]
             return JSONResponse({"symbol": symbol, "prices": data})
         except Exception as e:
@@ -855,9 +855,7 @@ async def price_history(
 
 
 @app.get("/api/analysis")
-async def price_analysis(
-    request: Request, symbol: str, db: Session = Depends(get_db)
-):
+async def price_analysis(request: Request, symbol: str, db: Session = Depends(get_db)):
     current_user = get_current_user(request, db)
     if not current_user:
         return JSONResponse({"detail": "Unauthorized"}, status_code=401)

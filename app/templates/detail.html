@@ -347,7 +347,8 @@
         <select id="symbol-select" class="input" aria-label="Symbol">
             {% for item in watchlist %}
             <option value="{{ item.instrument.symbol }}">
-                {{ item.instrument.symbol }}{% if item.instrument.exchange %} · {{ item.instrument.exchange }}{% endif %}
+                {{ item.instrument.symbol }}{% if item.instrument.exchange %} · {{ item.instrument.exchange }}{% endif
+                %}
             </option>
             {% endfor %}
         </select>
