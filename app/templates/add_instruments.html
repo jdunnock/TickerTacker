@@ -109,6 +109,7 @@
                 <select id="exchange-select" class="input" aria-label="Exchange">
                     <option value="helsinki">Helsinki (OMXH)</option>
                     <option value="stockholm">Stockholm (OMXS)</option>
+                    <option value="us">US (NYSE/Nasdaq)</option>
                 </select>
             </div>
 
@@ -122,7 +123,7 @@
             <div class="field-row">
                 <label class="field-label">Selected</label>
                 <div id="selected-list" class="selected-list"></div>
-                <p class="helper">Helsinki uses .HE (e.g., NOKIA.HE). Stockholm uses .ST (e.g., HM-B.ST).</p>
+                <p class="helper">Helsinki uses .HE (e.g., NOKIA.HE). Stockholm uses .ST (e.g., HM-B.ST). US tickers use no suffix (e.g., AAPL).</p>
             </div>
 
             <input type="hidden" name="symbols_text" id="symbols-text" />
@@ -181,6 +182,20 @@
                     { symbol: "ASSA-B.ST", name: "Assa Abloy B" },
                     { symbol: "TELIA.ST", name: "Telia Company" },
                     { symbol: "EQT.ST", name: "EQT" }
+                ],
+                us: [
+                    { symbol: "AAPL", name: "Apple" },
+                    { symbol: "MSFT", name: "Microsoft" },
+                    { symbol: "AMZN", name: "Amazon" },
+                    { symbol: "GOOGL", name: "Alphabet A" },
+                    { symbol: "META", name: "Meta Platforms" },
+                    { symbol: "NVDA", name: "Nvidia" },
+                    { symbol: "TSLA", name: "Tesla" },
+                    { symbol: "JPM", name: "JPMorgan Chase" },
+                    { symbol: "V", name: "Visa" },
+                    { symbol: "MA", name: "Mastercard" },
+                    { symbol: "KO", name: "Coca-Cola" },
+                    { symbol: "PEP", name: "PepsiCo" }
                 ]
             };
 
