@@ -1,0 +1,50 @@
+{% if watchlist %}
+<table class="watchlist-table frosted-head">
+    <thead>
+        <tr>
+            <th>Symbol</th>
+            <th class="col-exchange">Exchange</th>
+            <th class="col-last">Last</th>
+            <th class="col-close">Last Close</th>
+            <th class="col-change">1D Change (%)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in watchlist %}
+        <tr class="watchlist-row{% if item.changed %} changed{% endif %}" data-symbol="{{ item.instrument.symbol }}">
+            <td>
+                <strong>{{ item.instrument.symbol }}</strong>
+                <div class="row-subline">
+                    <div class="row-cell">
+                        <span class="row-label">Exch</span>
+                        <span class="row-value">{{ item.instrument.exchange or "N/A" }}</span>
+                    </div>
+                    <div class="row-cell">
+                        <span class="row-label">Last</span>
+                        <span class="row-value last-value">${{ "%.2f"|format(item.last) }}</span>
+                    </div>
+                    <div class="row-cell">
+                        <span class="row-label">Close</span>
+                        <span class="row-value">${{ "%.2f"|format(item.last_close) }}</span>
+                    </div>
+                    <div class="row-cell">
+                        <span class="row-label">1D</span>
+                        <span class="row-value {% if item.change_pct >= 0 %}up{% else %}down{% endif %}">
+                            {{ "%+.2f"|format(item.change_pct) }}%
+                        </span>
+                    </div>
+                </div>
+            </td>
+            <td class="col-exchange">{{ item.instrument.exchange or "N/A" }}</td>
+            <td class="col-last"><span class="last-value">${{ "%.2f"|format(item.last) }}</span></td>
+            <td class="col-close">${{ "%.2f"|format(item.last_close) }}</td>
+            <td class="col-change {% if item.change_pct >= 0 %}up{% else %}down{% endif %}">
+                {{ "%+.2f"|format(item.change_pct) }}%
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">No instruments in watchlist. Add some to get started.</p>
+{% endif %}

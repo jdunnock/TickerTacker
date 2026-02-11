@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Ticker Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .watchlist-panel {
+        min-width: 0;
+    }
+
+    .watchlist-panel.panel {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(230, 244, 255, 0.7));
+        border: 1px solid rgba(207, 233, 255, 0.65);
+    }
+
+    .watchlist-panel.panel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        background: linear-gradient(120deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+        pointer-events: none;
+        mix-blend-mode: screen;
+    }
+
+    .watchlist-panel.panel {
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+        position: relative;
+    }
+
+    .watchlist-panel.panel:hover {
+        box-shadow: 0 18px 40px rgba(47, 123, 255, 0.18);
+        transform: translateY(-2px);
+    }
+
+    .watchlist-table {
+        margin-top: 0;
+    }
+
+    .watchlist-table th,
+    .watchlist-table td {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .row-subline {
+        display: none;
+        font-size: 12px;
+        color: #6b7a8b;
+        margin-top: 4px;
+    }
+
+    .row-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .row-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+    }
+
+    .row-value {
+        font-size: 12px;
+        color: #0f172a;
+    }
+
+    .row-value.up {
+        color: #16a34a;
+        font-weight: 700;
+    }
+
+    .row-value.down {
+        color: #dc2626;
+        font-weight: 700;
+    }
+
+    .watchlist-row {
+        cursor: pointer;
+        transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .watchlist-row:hover {
+        background: rgba(120, 185, 255, 0.18);
+        box-shadow: inset 0 0 0 1px rgba(77, 155, 255, 0.25);
+    }
+
+    .watchlist-refresh {
+        animation: refreshPulse 0.5s ease;
+    }
+
+    @keyframes refreshPulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(120, 185, 255, 0.35);
+        }
+
+        100% {
+            box-shadow: 0 0 0 18px rgba(120, 185, 255, 0);
+        }
+    }
+
+    .watchlist-row.changed {
+        animation: rowFlash 2.2s ease 2;
+    }
+
+    .last-value {
+        font-weight: 700;
+        color: #1f5fe6;
+    }
+
+    .row-subline .last-value {
+        color: #1f5fe6;
+    }
+
+    @keyframes rowFlash {
+        0% {
+            background: rgba(56, 189, 248, 0.65);
+            box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.45);
+        }
+
+        60% {
+            background: rgba(125, 211, 252, 0.35);
+            box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.3);
+        }
+
+        100% {
+            background: transparent;
+            box-shadow: none;
+        }
+    }
+
+    @keyframes lastPulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(31, 95, 230, 0.35);
+        }
+
+        60% {
+            transform: scale(1.04);
+            box-shadow: 0 0 0 10px rgba(31, 95, 230, 0);
+        }
+
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(31, 95, 230, 0);
+        }
+    }
+
+    .watchlist-row.changed .last-value {
+        animation: lastPulse 1.2s ease;
+    }
+
+    @media (max-width: 600px) {
+        .dashboard-header {
+            align-items: flex-start;
+        }
+
+        .header-actions {
+            width: 100%;
+        }
+
+        .header-actions a,
+        .header-actions button {
+            width: 100%;
+            text-align: center;
+        }
+
+        .col-exchange,
+        .col-change,
+        .col-last,
+        .col-close {
+            display: none;
+        }
+
+        .row-subline {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .watchlist-row:hover {
+            background: transparent;
+            box-shadow: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard fade-in">
+    <div class="dashboard-header">
+        <div>
+            <h2>My Watchlist</h2>
+            <p style="color: #6b7a8b; font-size: 14px; margin-top: 4px;">Glacial clarity on every tick.</p>
+        </div>
+        <div class="header-actions">
+            <a class="btn btn-primary" href="/add-instruments">➕ Add Instruments</a>
+            <form id="clear-watchlist" method="POST" action="/api/watchlist/clear">
+                <button class="btn btn-danger" type="submit">🧹 Clear watchlist</button>
+            </form>
+        </div>
+    </div>
+
+    {% if watchlist_cleared %}
+    <div id="watchlist-cleared" class="notice notice-success">Watchlist cleared.</div>
+    {% endif %}
+
+    <div class="watchlist-panel panel">
+        <div id="watchlist-table" hx-post="/api/prices/refresh" hx-trigger="load, every 15s" hx-swap="innerHTML">
+            {% if watchlist %}
+            <table class="watchlist-table frosted-head">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th class="col-exchange">Exchange</th>
+                        <th class="col-last">Last</th>
+                        <th class="col-close">Last Close</th>
+                        <th class="col-change">1D Change (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in watchlist %}
+                    <tr class="watchlist-row{% if item.changed %} changed{% endif %}"
+                        data-symbol="{{ item.instrument.symbol }}">
+                        <td>
+                            <strong>{{ item.instrument.symbol }}</strong>
+                            <div class="row-subline">
+                                <div class="row-cell">
+                                    <span class="row-label">Exch</span>
+                                    <span class="row-value">{{ item.instrument.exchange or "N/A" }}</span>
+                                </div>
+                                <div class="row-cell">
+                                    <span class="row-label">Last</span>
+                                    <span class="row-value last-value">${{ "%.2f"|format(item.last) }}</span>
+                                </div>
+                                <div class="row-cell">
+                                    <span class="row-label">Close</span>
+                                    <span class="row-value">${{ "%.2f"|format(item.last_close) }}</span>
+                                </div>
+                                <div class="row-cell">
+                                    <span class="row-label">1D</span>
+                                    <span class="row-value {% if item.change_pct >= 0 %}up{% else %}down{% endif %}">
+                                        {{ "%+.2f"|format(item.change_pct) }}%
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="col-exchange">{{ item.instrument.exchange or "N/A" }}</td>
+                        <td class="col-last"><span class="last-value">${{ "%.2f"|format(item.last) }}</span></td>
+                        <td class="col-close">${{ "%.2f"|format(item.last_close) }}</td>
+                        <td class="col-change {% if item.change_pct >= 0 %}up{% else %}down{% endif %}">
+                            {{ "%+.2f"|format(item.change_pct) }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty-state">No instruments in watchlist. Add some to get started.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var tableContainer = document.getElementById("watchlist-table");
+        var clearForm = document.getElementById("clear-watchlist");
+        var watchlistCleared = document.getElementById("watchlist-cleared");
+
+        function goToDetail(symbol) {
+            if (!symbol) {
+                return;
+            }
+            localStorage.setItem("tickerTrackerSelected", symbol);
+            window.location.href = "/detail?symbol=" + encodeURIComponent(symbol);
+        }
+
+        if (clearForm) {
+            clearForm.addEventListener("submit", function (event) {
+                if (!confirm("Clear all instruments from the watchlist?")) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        if (watchlistCleared) {
+            setTimeout(function () {
+                watchlistCleared.style.display = "none";
+            }, 3000);
+        }
+
+        if (tableContainer) {
+            tableContainer.addEventListener("click", function (event) {
+                var row = event.target.closest(".watchlist-row");
+                if (!row) {
+                    return;
+                }
+                goToDetail(row.dataset.symbol);
+            });
+        }
+
+        document.body.addEventListener("htmx:afterSwap", function (event) {
+            if (event.target && event.target.id === "watchlist-table") {
+                event.target.classList.remove("watchlist-refresh");
+                void event.target.offsetWidth;
+                event.target.classList.add("watchlist-refresh");
+            }
+        });
+    })();
+</script>
+{% endblock %}

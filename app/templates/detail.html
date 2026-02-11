@@ -1,0 +1,1267 @@
+{% extends "base.html" %}
+
+{% block title %}Ticker Detail - Ticker Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .symbol-picker {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .symbol-hint {
+        font-size: 12px;
+        color: #6b7a8b;
+    }
+
+    .chart-panel {
+        padding: 18px;
+        min-height: 360px;
+        position: relative;
+        background: linear-gradient(140deg, rgba(255, 255, 255, 0.92), rgba(230, 244, 255, 0.75));
+        border: 1px solid rgba(207, 233, 255, 0.7);
+    }
+
+    .chart-panel.panel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        background: linear-gradient(120deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+        pointer-events: none;
+        mix-blend-mode: screen;
+    }
+
+    .chart-panel.panel {
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+
+    .chart-panel.panel:hover {
+        box-shadow: 0 18px 40px rgba(47, 123, 255, 0.18);
+        transform: translateY(-2px);
+    }
+
+    .chart-refresh {
+        animation: refreshPulse 0.5s ease;
+    }
+
+    @keyframes refreshPulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(120, 185, 255, 0.35);
+        }
+
+        100% {
+            box-shadow: 0 0 0 18px rgba(120, 185, 255, 0);
+        }
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 12px;
+        gap: 10px;
+    }
+
+    .chart-range {
+        display: inline-flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .chart-range-select {
+        display: none;
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(255, 255, 255, 0.9);
+        font-size: 12px;
+    }
+
+    .range-btn {
+        background: rgba(255, 255, 255, 0.9);
+        color: #334155;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .range-btn.active {
+        background: linear-gradient(120deg, #4d9bff, #1f5fe6);
+        color: white;
+        border-color: transparent;
+    }
+
+    .chart-title {
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .chart-status {
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    .metrics-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        margin: 14px 0 8px;
+    }
+
+    .analysis-panel {
+        margin-top: 10px;
+    }
+
+    .analysis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+    }
+
+    .analysis-card {
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(207, 233, 255, 0.6);
+        box-shadow: 0 10px 18px rgba(47, 123, 255, 0.08);
+    }
+
+    .analysis-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #6b7a8b;
+        margin-bottom: 8px;
+    }
+
+    .analysis-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
+        padding: 4px 0;
+    }
+
+    .analysis-label {
+        color: #6b7a8b;
+    }
+
+    .analysis-value {
+        font-weight: 600;
+        color: #0b1220;
+    }
+
+    .analysis-value.good {
+        color: #16a34a;
+    }
+
+    .analysis-value.neutral {
+        color: #64748b;
+    }
+
+    .analysis-value.bad {
+        color: #dc2626;
+    }
+
+    .analysis-note {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #64748b;
+    }
+
+    .analyst-note {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(207, 233, 255, 0.6);
+        box-shadow: 0 10px 18px rgba(47, 123, 255, 0.08);
+        font-size: 13px;
+        line-height: 1.5;
+        color: #0f172a;
+    }
+
+    .analyst-note strong {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #6b7a8b;
+        margin-bottom: 6px;
+    }
+
+    .analyst-note-meta {
+        margin-top: 8px;
+        font-size: 11px;
+        color: #64748b;
+    }
+
+    .metric-card {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(207, 233, 255, 0.6);
+        box-shadow: 0 10px 18px rgba(47, 123, 255, 0.08);
+    }
+
+    .metric-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7a8b;
+        margin-bottom: 4px;
+    }
+
+    .metric-value {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0b1220;
+    }
+
+    .metric-value.up {
+        color: #16a34a;
+    }
+
+    .metric-value.down {
+        color: #dc2626;
+    }
+
+    #history-chart {
+        width: 100%;
+        height: 260px;
+        display: block;
+    }
+
+    .chart-empty {
+        height: 260px;
+        border: 1px dashed rgba(148, 163, 184, 0.5);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        font-size: 14px;
+        background: rgba(255, 255, 255, 0.7);
+    }
+
+    .chart-tooltip {
+        position: absolute;
+        display: none;
+        padding: 6px 10px;
+        background: rgba(17, 24, 39, 0.92);
+        color: #f9fafb;
+        font-size: 12px;
+        border-radius: 6px;
+        pointer-events: none;
+        white-space: nowrap;
+        z-index: 2;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .chart-tooltip.is-up {
+        background: rgba(6, 78, 59, 0.92);
+    }
+
+    .chart-tooltip.is-down {
+        background: rgba(127, 29, 29, 0.92);
+    }
+
+    .tooltip-change.up {
+        color: #34d399;
+        font-weight: 600;
+    }
+
+    .tooltip-change.down {
+        color: #f87171;
+        font-weight: 600;
+    }
+
+    .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    @media (max-width: 600px) {
+        .detail-actions {
+            width: 100%;
+        }
+
+        .detail-actions a,
+        .detail-actions button {
+            width: 100%;
+            text-align: center;
+        }
+
+        .chart-range {
+            display: none;
+        }
+
+        .chart-range-select {
+            display: inline-block;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail fade-in">
+    <div class="detail-header">
+        <div>
+            <h2>Ticker Detail</h2>
+            <p style="color: #6b7a8b; font-size: 14px; margin-top: 4px;">Focus on one ticker at a time.</p>
+        </div>
+        <div class="detail-actions">
+            <a class="btn btn-ghost" href="/add-instruments">➕ Add Instruments</a>
+        </div>
+    </div>
+
+    {% if watchlist %}
+    <div class="symbol-picker">
+        <label class="field-label" for="symbol-select">Symbol</label>
+        <select id="symbol-select" class="input" aria-label="Symbol">
+            {% for item in watchlist %}
+            <option value="{{ item.instrument.symbol }}">
+                {{ item.instrument.symbol }}{% if item.instrument.exchange %} · {{ item.instrument.exchange }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+        <div class="symbol-hint">Tip: your last selection is remembered.</div>
+    </div>
+
+    <div class="chart-panel panel">
+        <div class="chart-header">
+            <div>
+                <div class="chart-title" id="chart-title">Select a ticker</div>
+                <div class="chart-status" id="chart-status">Pick a ticker to view history.</div>
+            </div>
+            <div class="chart-range" role="group" aria-label="Chart range">
+                <button type="button" class="range-btn" data-range="1d">1D</button>
+                <button type="button" class="range-btn" data-range="ytd">YTD</button>
+                <button type="button" class="range-btn" data-range="1m">1kk</button>
+                <button type="button" class="range-btn" data-range="6m">6kk</button>
+                <button type="button" class="range-btn" data-range="1y">1 vuosi</button>
+            </div>
+            <label>
+                <span class="visually-hidden">Chart range</span>
+                <select class="chart-range-select" id="chart-range-select" aria-label="Chart range">
+                    <option value="1d">1D</option>
+                    <option value="ytd">YTD</option>
+                    <option value="1m">1kk</option>
+                    <option value="6m">6kk</option>
+                    <option value="1y">1 vuosi</option>
+                </select>
+            </label>
+        </div>
+        <div class="metrics-panel" id="metrics-panel">
+            <div class="metric-card">
+                <div class="metric-label">Last</div>
+                <div class="metric-value" id="metric-last">--</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Change</div>
+                <div class="metric-value" id="metric-change">--</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">High</div>
+                <div class="metric-value" id="metric-high">--</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Low</div>
+                <div class="metric-value" id="metric-low">--</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Volume</div>
+                <div class="metric-value" id="metric-volume">--</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Points</div>
+                <div class="metric-value" id="metric-points">--</div>
+            </div>
+        </div>
+        <div id="chart-empty" class="chart-empty">No ticker selected.</div>
+        <svg id="history-chart" viewBox="0 0 640 280" aria-hidden="true"></svg>
+        <div id="chart-tooltip" class="chart-tooltip"></div>
+        <div class="analysis-panel" id="analysis-panel">
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <div class="analysis-title">Fundamentals</div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">P/E</span>
+                        <span class="analysis-value" id="fund-pe">--</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">P/S</span>
+                        <span class="analysis-value" id="fund-ps">--</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">EV/EBITDA</span>
+                        <span class="analysis-value" id="fund-ev-ebitda">--</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">EBITDA</span>
+                        <span class="analysis-value" id="fund-ebitda">--</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">Market Cap</span>
+                        <span class="analysis-value" id="fund-mcap">--</span>
+                    </div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-title">Technicals</div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">RSI (14)</span>
+                        <span class="analysis-value" id="tech-rsi">--</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">MACD</span>
+                        <span class="analysis-value" id="tech-macd">--</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">MA 50/200</span>
+                        <span class="analysis-value" id="tech-ma">--</span>
+                    </div>
+                    <div class="analysis-row">
+                        <span class="analysis-label">Trend</span>
+                        <span class="analysis-value" id="tech-trend">--</span>
+                    </div>
+                    <div class="analysis-note" id="tech-note">--</div>
+                </div>
+            </div>
+            <div class="analyst-note" id="analyst-note">
+                <strong>Analyst note</strong>
+                <div id="analyst-note-text">--</div>
+                <div class="analyst-note-meta" id="analyst-note-meta">--</div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state" style="margin-bottom: 16px;">No instruments in watchlist. Add some to get started.</div>
+    <a class="btn btn-primary" href="/add-instruments">➕ Add Instruments</a>
+    {% endif %}
+</div>
+
+<script>
+    (function () {
+        var symbolSelect = document.getElementById("symbol-select");
+        var chartTitle = document.getElementById("chart-title");
+        var chartStatus = document.getElementById("chart-status");
+        var chartEmpty = document.getElementById("chart-empty");
+        var chartSvg = document.getElementById("history-chart");
+        var chartPanel = document.querySelector(".chart-panel");
+        var chartTooltip = document.getElementById("chart-tooltip");
+        var rangeSelect = document.getElementById("chart-range-select");
+        var rangeButtons = document.querySelectorAll(".range-btn");
+        var metricLast = document.getElementById("metric-last");
+        var metricChange = document.getElementById("metric-change");
+        var metricHigh = document.getElementById("metric-high");
+        var metricLow = document.getElementById("metric-low");
+        var metricPoints = document.getElementById("metric-points");
+        var metricVolume = document.getElementById("metric-volume");
+        var fundPe = document.getElementById("fund-pe");
+        var fundPs = document.getElementById("fund-ps");
+        var fundEvEbitda = document.getElementById("fund-ev-ebitda");
+        var fundEbitda = document.getElementById("fund-ebitda");
+        var fundMcap = document.getElementById("fund-mcap");
+        var techRsi = document.getElementById("tech-rsi");
+        var techMacd = document.getElementById("tech-macd");
+        var techMa = document.getElementById("tech-ma");
+        var techTrend = document.getElementById("tech-trend");
+        var techNote = document.getElementById("tech-note");
+        var analystNoteText = document.getElementById("analyst-note-text");
+        var analystNoteMeta = document.getElementById("analyst-note-meta");
+        var selectedSymbol = null;
+        var selectedRange = "6m";
+        var currentPrices = [];
+        var chartMeta = null;
+        var hoverLine = null;
+        var hoverDot = null;
+
+        if (!chartSvg || !chartTitle) {
+            return;
+        }
+
+        function setStatus(message) {
+            chartStatus.textContent = message;
+        }
+
+        function clearChart() {
+            chartSvg.innerHTML = "";
+        }
+
+        function formatRatio(value) {
+            if (value === null || value === undefined) {
+                return "--";
+            }
+            return Number(value).toFixed(2);
+        }
+
+        function formatCompact(value) {
+            if (value === null || value === undefined) {
+                return "--";
+            }
+            var abs = Math.abs(value);
+            if (abs >= 1e12) {
+                return (value / 1e12).toFixed(2) + "T";
+            }
+            if (abs >= 1e9) {
+                return (value / 1e9).toFixed(2) + "B";
+            }
+            if (abs >= 1e6) {
+                return (value / 1e6).toFixed(2) + "M";
+            }
+            if (abs >= 1e3) {
+                return (value / 1e3).toFixed(1) + "K";
+            }
+            return String(Math.round(value));
+        }
+
+        function formatMoney(value) {
+            if (value === null || value === undefined) {
+                return "--";
+            }
+            return "$" + formatCompact(value);
+        }
+
+        function resetAnalysis(text) {
+            var value = text || "--";
+            fundPe.textContent = value;
+            fundPs.textContent = value;
+            fundEvEbitda.textContent = value;
+            fundEbitda.textContent = value;
+            fundMcap.textContent = value;
+            fundPe.classList.remove("good", "neutral", "bad");
+            fundPs.classList.remove("good", "neutral", "bad");
+            fundEvEbitda.classList.remove("good", "neutral", "bad");
+            techRsi.textContent = value;
+            techMacd.textContent = value;
+            techMa.textContent = value;
+            techTrend.textContent = value;
+            if (techNote) {
+                techNote.textContent = value;
+            }
+            if (analystNoteText) {
+                analystNoteText.textContent = value;
+            }
+            if (analystNoteMeta) {
+                analystNoteMeta.textContent = "--";
+            }
+        }
+
+        function normalizeIndustry(value) {
+            if (!value) {
+                return "other";
+            }
+            var text = String(value).toLowerCase();
+            if (text.includes("bank") || text.includes("financial")) {
+                return "financial";
+            }
+            if (text.includes("utility")) {
+                return "utilities";
+            }
+            if (text.includes("energy") || text.includes("oil") || text.includes("gas")) {
+                return "energy";
+            }
+            if (text.includes("real estate")) {
+                return "realestate";
+            }
+            if (text.includes("health") || text.includes("pharma") || text.includes("biotech")) {
+                return "healthcare";
+            }
+            if (text.includes("tech") || text.includes("software") || text.includes("semiconductor")) {
+                return "tech";
+            }
+            if (text.includes("consumer") || text.includes("retail")) {
+                return "consumer";
+            }
+            if (text.includes("industrial") || text.includes("manufact")) {
+                return "industrial";
+            }
+            return "other";
+        }
+
+        function scoreThreshold(value, metric, sectorKey) {
+            if (value === null || value === undefined) {
+                return "neutral";
+            }
+            var thresholds = {
+                tech: { pe: [25, 40], ps: [4, 8], ev: [15, 25] },
+                financial: { pe: [12, 18], ps: [2, 4], ev: [10, 15] },
+                utilities: { pe: [18, 25], ps: [2.5, 4], ev: [12, 18] },
+                energy: { pe: [12, 20], ps: [1.5, 3], ev: [6, 10] },
+                realestate: { pe: [20, 30], ps: [3, 5], ev: [12, 18] },
+                healthcare: { pe: [20, 35], ps: [4, 8], ev: [15, 25] },
+                consumer: { pe: [18, 30], ps: [2.5, 5], ev: [12, 20] },
+                industrial: { pe: [18, 30], ps: [2.5, 5], ev: [12, 20] },
+                other: { pe: [18, 30], ps: [2.5, 5], ev: [12, 20] }
+            };
+            var key = thresholds[sectorKey] ? sectorKey : "other";
+            var bucket = thresholds[key];
+            var range = metric === "pe" ? bucket.pe : metric === "ps" ? bucket.ps : bucket.ev;
+            if (value <= range[0]) {
+                return "good";
+            }
+            if (value <= range[1]) {
+                return "neutral";
+            }
+            return "bad";
+        }
+
+        function applyScore(el, value, metric, sectorKey) {
+            el.classList.remove("good", "neutral", "bad");
+            var score = scoreThreshold(value, metric, sectorKey);
+            el.classList.add(score);
+        }
+
+        function updateAnalysis(data) {
+            if (!data) {
+                resetAnalysis();
+                return;
+            }
+            var fundamentals = data.fundamentals || {};
+            var technicals = data.technicals || {};
+            var analystNote = data.analystNote || null;
+            var sectorKey = normalizeIndustry(
+                fundamentals.industry || fundamentals.sector
+            );
+
+            fundPe.textContent = formatRatio(fundamentals.pe);
+            fundPs.textContent = formatRatio(fundamentals.ps);
+            fundEvEbitda.textContent = formatRatio(fundamentals.evToEbitda);
+            fundEbitda.textContent = formatMoney(fundamentals.ebitda);
+            fundMcap.textContent = formatMoney(fundamentals.marketCap);
+
+            applyScore(fundPe, fundamentals.pe, "pe", sectorKey);
+            applyScore(fundPs, fundamentals.ps, "ps", sectorKey);
+            applyScore(fundEvEbitda, fundamentals.evToEbitda, "ev", sectorKey);
+
+            if (technicals.rsi === null || technicals.rsi === undefined) {
+                techRsi.textContent = "--";
+            } else {
+                var rsiValue = Number(technicals.rsi).toFixed(1);
+                var rsiLabel = "neutral";
+                if (technicals.rsi >= 70) {
+                    rsiLabel = "overbought";
+                } else if (technicals.rsi <= 30) {
+                    rsiLabel = "oversold";
+                }
+                techRsi.textContent = rsiValue + " (" + rsiLabel + ")";
+            }
+
+            if (technicals.macd === null || technicals.macd === undefined) {
+                techMacd.textContent = "--";
+            } else {
+                var macd = Number(technicals.macd).toFixed(3);
+                var signal = technicals.macdSignal === null || technicals.macdSignal === undefined
+                    ? "--"
+                    : Number(technicals.macdSignal).toFixed(3);
+                techMacd.textContent = macd + " / " + signal;
+            }
+
+            if (technicals.ma50 === null || technicals.ma50 === undefined
+                || technicals.ma200 === null || technicals.ma200 === undefined) {
+                techMa.textContent = "--";
+            } else {
+                var maLabel = technicals.ma50 >= technicals.ma200
+                    ? "50d above 200d"
+                    : "50d below 200d";
+                techMa.textContent = maLabel;
+            }
+
+            if (techTrend) {
+                var trend = "neutral";
+                if (technicals.ma50 !== null && technicals.ma50 !== undefined
+                    && technicals.ma200 !== null && technicals.ma200 !== undefined) {
+                    if (technicals.ma50 >= technicals.ma200 && technicals.rsi >= 55) {
+                        trend = "bullish";
+                    } else if (technicals.ma50 < technicals.ma200 && technicals.rsi <= 45) {
+                        trend = "bearish";
+                    }
+                }
+                techTrend.textContent = trend;
+            }
+
+            if (techNote) {
+                if (technicals.ma50 && technicals.ma200) {
+                    techNote.textContent = "Trend view based on MA 50/200 and RSI";
+                } else {
+                    techNote.textContent = "--";
+                }
+            }
+
+            if (analystNoteText) {
+                analystNoteText.textContent = analystNote && analystNote.text
+                    ? analystNote.text
+                    : "--";
+            }
+            if (analystNoteMeta) {
+                analystNoteMeta.textContent = analystNote && analystNote.updatedAt
+                    ? "Updated " + new Date(analystNote.updatedAt).toLocaleString()
+                    : "--";
+            }
+        }
+
+        function updateMetrics(prices) {
+            if (!prices.length) {
+                metricLast.textContent = "--";
+                metricChange.textContent = "--";
+                metricHigh.textContent = "--";
+                metricLow.textContent = "--";
+                metricPoints.textContent = "--";
+                metricVolume.textContent = "--";
+                return;
+            }
+
+            var last = prices[prices.length - 1].c;
+            var first = prices[0].c;
+            var lows = prices.map(function (p) { return p.l !== undefined ? p.l : p.c; });
+            var highs = prices.map(function (p) { return p.h !== undefined ? p.h : p.c; });
+            var low = Math.min.apply(null, lows);
+            var high = Math.max.apply(null, highs);
+            var change = first ? ((last - first) / first * 100) : 0;
+            var delta = last - first;
+            var volume = prices.reduce(function (sum, p) {
+                return sum + (p.v || 0);
+            }, 0);
+
+            function formatVolume(value) {
+                if (!value) {
+                    return "--";
+                }
+                if (value >= 1e9) {
+                    return (value / 1e9).toFixed(2) + "B";
+                }
+                if (value >= 1e6) {
+                    return (value / 1e6).toFixed(2) + "M";
+                }
+                if (value >= 1e3) {
+                    return (value / 1e3).toFixed(1) + "K";
+                }
+                return String(Math.round(value));
+            }
+
+            var arrow = delta >= 0 ? "▲ " : "▼ ";
+            metricLast.textContent = arrow + "$" + last.toFixed(2);
+            metricChange.textContent = (delta >= 0 ? "▲ " : "▼ ")
+                + (change >= 0 ? "+" : "") + change.toFixed(2) + "%"
+                + " / " + (delta >= 0 ? "+" : "") + "$" + Math.abs(delta).toFixed(2);
+            metricChange.classList.remove("up", "down");
+            metricChange.classList.add(delta >= 0 ? "up" : "down");
+            metricHigh.textContent = "$" + high.toFixed(2);
+            metricLow.textContent = "$" + low.toFixed(2);
+            metricPoints.textContent = String(prices.length);
+            metricVolume.textContent = formatVolume(volume);
+            metricLast.classList.remove("up", "down");
+            metricLast.classList.add(delta >= 0 ? "up" : "down");
+        }
+
+        function showEmpty(show, message) {
+            if (message) {
+                chartEmpty.textContent = message;
+            } else {
+                chartEmpty.textContent = "No ticker selected.";
+            }
+            chartEmpty.style.display = show ? "flex" : "none";
+            chartSvg.style.display = show ? "none" : "block";
+            if (chartTooltip) {
+                chartTooltip.style.display = "none";
+            }
+        }
+
+        function renderChart(prices) {
+            if (!prices.length) {
+                showEmpty(true);
+                clearChart();
+                return;
+            }
+
+            var width = 640;
+            var height = 280;
+            var padding = 24;
+            var min = Math.min.apply(null, prices.map(function (p) { return p.c; }));
+            var max = Math.max.apply(null, prices.map(function (p) { return p.c; }));
+            if (min === max) {
+                min -= 1;
+                max += 1;
+            }
+
+            var xStep = (width - padding * 2) / (prices.length - 1 || 1);
+            var points = prices.map(function (p, i) {
+                var x = padding + i * xStep;
+                var y = height - padding - ((p.c - min) / (max - min)) * (height - padding * 2);
+                return x.toFixed(2) + "," + y.toFixed(2);
+            });
+
+            var areaPoints = [
+                padding + "," + (height - padding),
+                points.join(" "),
+                (width - padding) + "," + (height - padding)
+            ].join(" ");
+
+            function formatDateLabel(value) {
+                var date = new Date(value);
+                if (selectedRange === "1d") {
+                    if (typeof value === "string") {
+                        var match = value.match(/T(\d{2}:\d{2})/);
+                        if (match) {
+                            return match[1];
+                        }
+                    }
+                    if (Number.isNaN(date.getTime())) {
+                        return "";
+                    }
+                    return date.toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit"
+                    });
+                }
+                if (Number.isNaN(date.getTime())) {
+                    return "";
+                }
+                return date.toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric"
+                });
+            }
+
+            var tickIndexes = [0, Math.floor((prices.length - 1) / 2), prices.length - 1];
+            var tickLabels = tickIndexes.map(function (idx) {
+                var x = padding + idx * xStep;
+                var label = formatDateLabel(prices[idx].t);
+                return { x: x, label: label };
+            });
+
+            var monthLines = [];
+            if (selectedRange !== "1d") {
+                for (var i = 1; i < prices.length; i += 1) {
+                    var prevDate = new Date(prices[i - 1].t);
+                    var currDate = new Date(prices[i].t);
+                    if (Number.isNaN(prevDate.getTime()) || Number.isNaN(currDate.getTime())) {
+                        continue;
+                    }
+                    if (
+                        currDate.getMonth() !== prevDate.getMonth()
+                        || currDate.getFullYear() !== prevDate.getFullYear()
+                    ) {
+                        monthLines.push({
+                            x: padding + i * xStep,
+                            isYear: currDate.getFullYear() !== prevDate.getFullYear(),
+                            date: currDate
+                        });
+                    }
+                }
+            }
+
+            var hourLines = [];
+            if (selectedRange === "1d") {
+                for (var h = 1; h < prices.length; h += 1) {
+                    var prevHour = new Date(prices[h - 1].t);
+                    var currHour = new Date(prices[h].t);
+                    if (Number.isNaN(prevHour.getTime()) || Number.isNaN(currHour.getTime())) {
+                        continue;
+                    }
+                    if (currHour.getHours() !== prevHour.getHours()) {
+                        hourLines.push({ x: padding + h * xStep });
+                    }
+                }
+            }
+
+            var monthLabels = [];
+            if (monthLines.length) {
+                var monthIndex = 0;
+                for (var j = 0; j < monthLines.length; j += 1) {
+                    if (monthLines[j].isYear || monthIndex % 2 === 0) {
+                        var labelDate = monthLines[j].date;
+                        if (!Number.isNaN(labelDate.getTime())) {
+                            var formatOptions = monthLines[j].isYear
+                                ? { month: "short", year: "numeric" }
+                                : { month: "short" };
+                            monthLabels.push({
+                                x: monthLines[j].x,
+                                label: labelDate.toLocaleDateString(undefined, formatOptions)
+                            });
+                        }
+                    }
+                    monthIndex += 1;
+                }
+            }
+
+            var yTicks = [min, (min + max) / 2, max];
+            var yLabels = yTicks.map(function (value) {
+                var y = height - padding - ((value - min) / (max - min)) * (height - padding * 2);
+                return { y: y, label: "$" + value.toFixed(2) };
+            });
+
+            chartSvg.innerHTML = ""
+                + "<defs>"
+                + "<linearGradient id='historyFill' x1='0' x2='0' y1='0' y2='1'>"
+                + "<stop offset='0%' stop-color='#60a5fa' stop-opacity='0.45'/>"
+                + "<stop offset='100%' stop-color='#60a5fa' stop-opacity='0.02'/>"
+                + "</linearGradient>"
+                + "</defs>"
+                + "<rect x='0' y='0' width='" + width + "' height='" + height + "' fill='white' />"
+                + hourLines.map(function (line) {
+                    return "<line x1='" + line.x.toFixed(2) + "' y1='" + padding + "' x2='" + line.x.toFixed(2) + "' y2='" + (height - padding) + "' stroke='#e2e8f0' stroke-width='1' />";
+                }).join("")
+                + monthLines.map(function (line) {
+                    return "<line x1='" + line.x.toFixed(2) + "' y1='" + padding + "' x2='" + line.x.toFixed(2) + "' y2='" + (height - padding) + "' stroke='" + (line.isYear ? "#d1d5db" : "#eef2f7") + "' stroke-width='1' />";
+                }).join("")
+                + monthLabels.map(function (label) {
+                    return "<text x='" + label.x.toFixed(2) + "' y='" + (padding - 6) + "' text-anchor='middle' fill='#9ca3af' font-size='10'>" + label.label + "</text>";
+                }).join("")
+                + yLabels.map(function (tick) {
+                    return "<line x1='" + padding + "' y1='" + tick.y.toFixed(2) + "' x2='" + (width - padding) + "' y2='" + tick.y.toFixed(2) + "' stroke='#eef2f7' stroke-width='1' />";
+                }).join("")
+                + "<line x1='" + padding + "' y1='" + (height - padding) + "' x2='" + (width - padding) + "' y2='" + (height - padding) + "' stroke='#e5e7eb' stroke-width='1' />"
+                + yLabels.map(function (tick) {
+                    return "<text x='" + (padding - 6) + "' y='" + tick.y.toFixed(2) + "' text-anchor='end' dominant-baseline='middle' fill='#6b7280' font-size='11'>" + tick.label + "</text>";
+                }).join("")
+                + "<polyline fill='url(#historyFill)' stroke='none' points='" + areaPoints + "' />"
+                + "<polyline fill='none' stroke='#2563eb' stroke-width='2' points='" + points.join(" ") + "' />"
+                + "<line id='hover-line' x1='0' y1='" + padding + "' x2='0' y2='" + (height - padding) + "' stroke='#94a3b8' stroke-width='1' opacity='0' />"
+                + "<circle id='hover-dot' cx='0' cy='0' r='4' fill='#2563eb' stroke='white' stroke-width='2' opacity='0' />"
+                + tickLabels.map(function (tick) {
+                    return "<text x='" + tick.x.toFixed(2) + "' y='" + (height - 6) + "' text-anchor='middle' fill='#6b7280' font-size='11'>" + tick.label + "</text>";
+                }).join("");
+            showEmpty(false);
+
+            currentPrices = prices;
+            chartMeta = {
+                width: width,
+                height: height,
+                padding: padding,
+                xStep: xStep,
+                min: min,
+                max: max
+            };
+            hoverLine = document.getElementById("hover-line");
+            hoverDot = document.getElementById("hover-dot");
+        }
+
+        function formatTooltipDate(value) {
+            var date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return "";
+            }
+            return date.toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                year: "numeric"
+            });
+        }
+
+        function updateTooltip(clientX, clientY) {
+            if (!chartMeta || !currentPrices.length) {
+                return;
+            }
+            var rect = chartSvg.getBoundingClientRect();
+            var x = (clientX - rect.left) / rect.width * chartMeta.width;
+            var clampedX = Math.max(chartMeta.padding, Math.min(chartMeta.width - chartMeta.padding, x));
+            var idx = chartMeta.xStep > 0
+                ? Math.round((clampedX - chartMeta.padding) / chartMeta.xStep)
+                : 0;
+            idx = Math.max(0, Math.min(currentPrices.length - 1, idx));
+
+            var price = currentPrices[idx];
+            var px = chartMeta.padding + idx * chartMeta.xStep;
+            var py = chartMeta.height - chartMeta.padding
+                - ((price.c - chartMeta.min) / (chartMeta.max - chartMeta.min))
+                * (chartMeta.height - chartMeta.padding * 2);
+
+            if (hoverLine && hoverDot) {
+                hoverLine.setAttribute("x1", px.toFixed(2));
+                hoverLine.setAttribute("x2", px.toFixed(2));
+                hoverLine.setAttribute("opacity", "1");
+                hoverDot.setAttribute("cx", px.toFixed(2));
+                hoverDot.setAttribute("cy", py.toFixed(2));
+                hoverDot.setAttribute("opacity", "1");
+            }
+
+            if (chartTooltip && chartPanel) {
+                var changeText = "";
+                var tooltipTone = "";
+                if (currentPrices.length > 1 && idx > 0) {
+                    var prev = currentPrices[idx - 1].c;
+                    if (prev) {
+                        var diff = (price.c - prev) / prev * 100;
+                        var changeClass = diff >= 0 ? "up" : "down";
+                        tooltipTone = diff >= 0 ? "is-up" : "is-down";
+                        changeText = " • <span class='tooltip-change " + changeClass + "'>"
+                            + (diff >= 0 ? "+" : "") + diff.toFixed(2) + "%</span>";
+                    }
+                }
+                var text = formatTooltipDate(price.t) + " • $" + price.c.toFixed(2) + changeText;
+                chartTooltip.innerHTML = text;
+                chartTooltip.classList.remove("is-up", "is-down");
+                if (tooltipTone) {
+                    chartTooltip.classList.add(tooltipTone);
+                }
+                chartTooltip.style.display = "block";
+
+                var panelRect = chartPanel.getBoundingClientRect();
+                var left = clientX - panelRect.left + 12;
+                var top = clientY - panelRect.top - 28;
+
+                chartTooltip.style.left = left + "px";
+                chartTooltip.style.top = top + "px";
+
+                var tooltipRect = chartTooltip.getBoundingClientRect();
+                if (left + tooltipRect.width > panelRect.width - 8) {
+                    chartTooltip.style.left = (panelRect.width - tooltipRect.width - 8) + "px";
+                }
+                if (top < 8) {
+                    chartTooltip.style.top = "8px";
+                }
+            }
+        }
+
+        function hideTooltip() {
+            if (hoverLine && hoverDot) {
+                hoverLine.setAttribute("opacity", "0");
+                hoverDot.setAttribute("opacity", "0");
+            }
+            if (chartTooltip) {
+                chartTooltip.style.display = "none";
+            }
+        }
+
+        function setRange(range) {
+            selectedRange = range;
+            localStorage.setItem("tickerTrackerRange", range);
+            var buttons = document.querySelectorAll(".range-btn");
+            buttons.forEach(function (button) {
+                button.classList.toggle("active", button.dataset.range === range);
+            });
+            if (rangeSelect) {
+                rangeSelect.value = range;
+            }
+        }
+
+        function getDateKey(value) {
+            if (typeof value === "string") {
+                var match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+                if (match) {
+                    return match[1];
+                }
+            }
+            var date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return "";
+            }
+            return date.toISOString().slice(0, 10);
+        }
+
+        function hasIntradayTimes(prices) {
+            return prices.some(function (price) {
+                if (typeof price.t !== "string") {
+                    return false;
+                }
+                var match = price.t.match(/T(\d{2}:\d{2})/);
+                return match ? match[1] !== "00:00" : false;
+            });
+        }
+
+        function updateUrl(symbol) {
+            var url = new URL(window.location.href);
+            if (symbol) {
+                url.searchParams.set("symbol", symbol);
+            } else {
+                url.searchParams.delete("symbol");
+            }
+            window.history.replaceState({}, "", url.toString());
+        }
+
+        function fetchHistory(symbol) {
+            if (!symbol) {
+                return;
+            }
+
+            chartTitle.textContent = symbol + " history";
+            setStatus("Loading...");
+            resetAnalysis("Loading...");
+            fetch(
+                "/api/analysis?symbol=" + encodeURIComponent(symbol)
+            )
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    updateAnalysis(data);
+                })
+                .catch(function () {
+                    resetAnalysis("--");
+                });
+            fetch(
+                "/api/prices/history?symbol="
+                + encodeURIComponent(symbol)
+                + "&range="
+                + encodeURIComponent(selectedRange)
+            )
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    var prices = data.prices || [];
+                    if (selectedRange === "1d" && prices.length > 1) {
+                        var latestKey = prices.reduce(function (maxKey, price) {
+                            var key = getDateKey(price.t);
+                            return key > maxKey ? key : maxKey;
+                        }, "");
+                        if (latestKey) {
+                            prices = prices.filter(function (price) {
+                                return getDateKey(price.t) === latestKey;
+                            });
+                        }
+                        if (prices.length && !hasIntradayTimes(prices)) {
+                            prices = [];
+                        }
+                    }
+                    if (!prices.length) {
+                        setStatus("No data yet.");
+                        var emptyMessage = selectedRange === "1d"
+                            ? "No intraday data for today."
+                            : "No data for selected range.";
+                        showEmpty(true, emptyMessage);
+                        clearChart();
+                        return;
+                    } else {
+                        var last = prices[prices.length - 1];
+                        setStatus("Latest close: $" + last.c.toFixed(2));
+                    }
+                    renderChart(prices);
+                    updateMetrics(prices);
+                    if (chartPanel) {
+                        chartPanel.classList.remove("chart-refresh");
+                        void chartPanel.offsetWidth;
+                        chartPanel.classList.add("chart-refresh");
+                    }
+                })
+                .catch(function () {
+                    setStatus("Failed to load history.");
+                    showEmpty(true);
+                    clearChart();
+                });
+        }
+
+        function selectSymbol(symbol) {
+            if (!symbol) {
+                return;
+            }
+            selectedSymbol = symbol;
+            localStorage.setItem("tickerTrackerSelected", symbol);
+            if (symbolSelect && symbolSelect.value !== symbol) {
+                symbolSelect.value = symbol;
+            }
+            updateUrl(symbol);
+            fetchHistory(symbol);
+        }
+
+        function getInitialSymbol() {
+            var params = new URLSearchParams(window.location.search);
+            var paramSymbol = params.get("symbol");
+            if (paramSymbol) {
+                return paramSymbol.toUpperCase();
+            }
+            var savedSymbol = localStorage.getItem("tickerTrackerSelected");
+            if (savedSymbol) {
+                return savedSymbol;
+            }
+            if (symbolSelect && symbolSelect.options.length) {
+                return symbolSelect.options[0].value;
+            }
+            return null;
+        }
+
+        function resolveSymbol(candidate) {
+            if (!candidate) {
+                return null;
+            }
+            if (!symbolSelect) {
+                return candidate;
+            }
+            var option = symbolSelect.querySelector("option[value='" + candidate + "']");
+            return option ? candidate : null;
+        }
+
+        var savedRange = localStorage.getItem("tickerTrackerRange");
+        if (savedRange) {
+            setRange(savedRange);
+        } else {
+            setRange(selectedRange);
+        }
+
+        rangeButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                setRange(button.dataset.range);
+                if (selectedSymbol) {
+                    fetchHistory(selectedSymbol);
+                }
+            });
+        });
+
+        if (rangeSelect) {
+            rangeSelect.addEventListener("change", function () {
+                setRange(rangeSelect.value);
+                if (selectedSymbol) {
+                    fetchHistory(selectedSymbol);
+                }
+            });
+        }
+
+        if (symbolSelect) {
+            symbolSelect.addEventListener("change", function () {
+                selectSymbol(symbolSelect.value);
+            });
+        }
+
+        if (chartSvg) {
+            chartSvg.addEventListener("mousemove", function (event) {
+                updateTooltip(event.clientX, event.clientY);
+            });
+            chartSvg.addEventListener("mouseleave", function () {
+                hideTooltip();
+            });
+            chartSvg.addEventListener("touchstart", function (event) {
+                if (event.touches.length) {
+                    updateTooltip(event.touches[0].clientX, event.touches[0].clientY);
+                }
+            }, { passive: true });
+            chartSvg.addEventListener("touchmove", function (event) {
+                if (event.touches.length) {
+                    updateTooltip(event.touches[0].clientX, event.touches[0].clientY);
+                }
+            }, { passive: true });
+            chartSvg.addEventListener("touchend", function () {
+                hideTooltip();
+            });
+        }
+
+        showEmpty(true);
+        var initialSymbol = resolveSymbol(getInitialSymbol());
+        if (initialSymbol) {
+            selectSymbol(initialSymbol);
+        }
+    })();
+</script>
+{% endblock %}

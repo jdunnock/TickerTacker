@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Add Instruments - Ticker Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .add-wrap {
+        max-width: 720px;
+        margin: 0 auto;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .field-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .suggestions {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .suggestion-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(255, 255, 255, 0.9);
+        cursor: pointer;
+        font-size: 13px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        text-align: left;
+    }
+
+    .suggestion-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px rgba(47, 123, 255, 0.12);
+    }
+
+    .suggestion-name {
+        color: #6b7a8b;
+        font-size: 12px;
+    }
+
+    .selected-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(77, 155, 255, 0.12);
+        border: 1px solid rgba(77, 155, 255, 0.35);
+        font-size: 12px;
+    }
+
+    .chip button {
+        background: transparent;
+        border: none;
+        color: #3b4856;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .helper {
+        color: #6b7a8b;
+        font-size: 13px;
+        margin-bottom: 18px;
+    }
+
+    @media (max-width: 600px) {
+
+        .form-actions a,
+        .form-actions button {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="add-wrap fade-in">
+    <h2>Add Instruments to Watchlist</h2>
+    <p class="helper">Select exchange and start typing. Yahoo Finance formats are used.</p>
+
+    <form id="add-instruments-form" method="POST" action="/api/instruments/add" class="card fade-in">
+        <fieldset style="border: none; padding: 0;">
+            <legend class="field-label" style="margin-bottom: 12px;">Tickers</legend>
+
+            <div class="field-row">
+                <label class="field-label" for="exchange-select">Exchange</label>
+                <select id="exchange-select" class="input" aria-label="Exchange">
+                    <option value="helsinki">Helsinki (OMXH)</option>
+                    <option value="stockholm">Stockholm (OMXS)</option>
+                </select>
+            </div>
+
+            <div class="field-row">
+                <label class="field-label" for="ticker-search">Search</label>
+                <input id="ticker-search" class="input" type="text" autocomplete="off"
+                    placeholder="Type a symbol or company name">
+                <div id="suggestions" class="suggestions"></div>
+            </div>
+
+            <div class="field-row">
+                <label class="field-label">Selected</label>
+                <div id="selected-list" class="selected-list"></div>
+                <p class="helper">Helsinki uses .HE (e.g., NOKIA.HE). Stockholm uses .ST (e.g., HM-B.ST).</p>
+            </div>
+
+            <input type="hidden" name="symbols_text" id="symbols-text" />
+
+            <div class="form-actions">
+                <button class="btn btn-primary" type="submit" id="submit-btn" disabled>✓ Add to Watchlist</button>
+                <a class="btn btn-ghost" href="/dashboard">← Back to Dashboard</a>
+            </div>
+        </fieldset>
+    </form>
+    <script>
+        (function () {
+            var form = document.getElementById("add-instruments-form");
+            var exchangeSelect = document.getElementById("exchange-select");
+            var searchInput = document.getElementById("ticker-search");
+            var suggestions = document.getElementById("suggestions");
+            var selectedList = document.getElementById("selected-list");
+            var symbolsField = document.getElementById("symbols-text");
+            var submitButton = document.getElementById("submit-btn");
+            if (!form) {
+                return;
+            }
+
+            var data = {
+                helsinki: [
+                    { symbol: "NOKIA.HE", name: "Nokia" },
+                    { symbol: "QTCOM.HE", name: "Qt Group" },
+                    { symbol: "KNEBV.HE", name: "Kone" },
+                    { symbol: "NESTE.HE", name: "Neste" },
+                    { symbol: "UPM.HE", name: "UPM-Kymmene" },
+                    { symbol: "FORTUM.HE", name: "Fortum" },
+                    { symbol: "ELISA.HE", name: "Elisa" },
+                    { symbol: "SAMPO.HE", name: "Sampo" },
+                    { symbol: "NORD1.HE", name: "Nordea Bank" },
+                    { symbol: "WRT1V.HE", name: "Wartsila" },
+                    { symbol: "METSO.HE", name: "Metso" },
+                    { symbol: "KCR.HE", name: "Konecranes" },
+                    { symbol: "KESKOA.HE", name: "Kesko A" },
+                    { symbol: "STERV.HE", name: "Stora Enso R" },
+                    { symbol: "CTY1S.HE", name: "Citycon" }
+                ],
+                stockholm: [
+                    { symbol: "ABB.ST", name: "ABB" },
+                    { symbol: "BETS-B.ST", name: "Betsson B" },
+                    { symbol: "STOR-B.ST", name: "Storskogen B" },
+                    { symbol: "ATCO-A.ST", name: "Atlas Copco A" },
+                    { symbol: "ATCO-B.ST", name: "Atlas Copco B" },
+                    { symbol: "ERIC-B.ST", name: "Ericsson B" },
+                    { symbol: "HM-B.ST", name: "H & M B" },
+                    { symbol: "VOLV-B.ST", name: "Volvo B" },
+                    { symbol: "SAND.ST", name: "Sandvik" },
+                    { symbol: "SKF-B.ST", name: "SKF B" },
+                    { symbol: "SEB-A.ST", name: "SEB A" },
+                    { symbol: "SWED-A.ST", name: "Swedbank A" },
+                    { symbol: "INVE-B.ST", name: "Investor B" },
+                    { symbol: "ASSA-B.ST", name: "Assa Abloy B" },
+                    { symbol: "TELIA.ST", name: "Telia Company" },
+                    { symbol: "EQT.ST", name: "EQT" }
+                ]
+            };
+
+            var selected = [];
+
+            function normalize(value) {
+                return value.toLowerCase().trim();
+            }
+
+            function updateSelected() {
+                selectedList.innerHTML = "";
+                selected.forEach(function (item) {
+                    var chip = document.createElement("div");
+                    chip.className = "chip";
+                    chip.innerHTML = "<span>" + item.symbol + "</span>";
+
+                    var removeButton = document.createElement("button");
+                    removeButton.type = "button";
+                    removeButton.textContent = "×";
+                    removeButton.addEventListener("click", function () {
+                        selected = selected.filter(function (entry) {
+                            return entry.symbol !== item.symbol;
+                        });
+                        updateSelected();
+                    });
+                    chip.appendChild(removeButton);
+                    selectedList.appendChild(chip);
+                });
+
+                symbolsField.value = selected.map(function (item) {
+                    return item.symbol;
+                }).join(", ");
+                submitButton.disabled = selected.length === 0;
+            }
+
+            function matchesQuery(item, query) {
+                if (!query) {
+                    return true;
+                }
+                var q = normalize(query);
+                var symbol = normalize(item.symbol);
+                var name = normalize(item.name);
+                if (symbol.startsWith(q)) {
+                    return true;
+                }
+                if (name.startsWith(q)) {
+                    return true;
+                }
+                return name.split(" ").some(function (part) {
+                    return part.startsWith(q);
+                });
+            }
+
+            function renderSuggestions() {
+                var exchange = exchangeSelect.value;
+                var query = searchInput.value;
+                var items = data[exchange] || [];
+
+                var filtered = items.filter(function (item) {
+                    return matchesQuery(item, query);
+                }).slice(0, 8);
+
+                suggestions.innerHTML = "";
+                if (!filtered.length) {
+                    var empty = document.createElement("div");
+                    empty.className = "helper";
+                    empty.textContent = "No matches";
+                    suggestions.appendChild(empty);
+                    return;
+                }
+
+                filtered.forEach(function (item) {
+                    var button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "suggestion-item";
+                    button.innerHTML = "<span>" + item.symbol + "</span><span class='suggestion-name'>" + item.name + "</span>";
+                    button.addEventListener("click", function () {
+                        if (!selected.some(function (entry) { return entry.symbol === item.symbol; })) {
+                            selected.push(item);
+                            updateSelected();
+                        }
+                        searchInput.value = "";
+                        renderSuggestions();
+                        searchInput.focus();
+                    });
+                    suggestions.appendChild(button);
+                });
+            }
+
+            exchangeSelect.addEventListener("change", function () {
+                renderSuggestions();
+                searchInput.focus();
+            });
+
+            searchInput.addEventListener("input", function () {
+                renderSuggestions();
+            });
+
+            searchInput.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    var first = suggestions.querySelector(".suggestion-item");
+                    if (first) {
+                        first.click();
+                    }
+                }
+            });
+
+            renderSuggestions();
+            updateSelected();
+
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+                var formData = new FormData(form);
+                fetch(form.action, {
+                    method: "POST",
+                    body: formData,
+                    credentials: "same-origin"
+                })
+                    .then(function (response) {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                            return;
+                        }
+                        if (response.ok) {
+                            window.location.href = "/dashboard";
+                        }
+                    })
+                    .catch(function () {
+                        window.location.href = "/dashboard";
+                    });
+            });
+        })();
+    </script>
+</div>
+{% endblock %}
