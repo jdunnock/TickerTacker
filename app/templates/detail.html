@@ -411,10 +411,6 @@
                 <div class="metric-label">Volume</div>
                 <div class="metric-value" id="metric-volume">--</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-label">Points</div>
-                <div class="metric-value" id="metric-points">--</div>
-            </div>
         </div>
         <div id="chart-empty" class="chart-empty">No ticker selected.</div>
         <svg id="history-chart" viewBox="0 0 640 280" aria-hidden="true"></svg>
@@ -493,7 +489,6 @@
         var metricChange = document.getElementById("metric-change");
         var metricHigh = document.getElementById("metric-high");
         var metricLow = document.getElementById("metric-low");
-        var metricPoints = document.getElementById("metric-points");
         var metricVolume = document.getElementById("metric-volume");
         var fundPe = document.getElementById("fund-pe");
         var fundPs = document.getElementById("fund-ps");
@@ -744,7 +739,6 @@
                 metricChange.textContent = "--";
                 metricHigh.textContent = "--";
                 metricLow.textContent = "--";
-                metricPoints.textContent = "--";
                 metricVolume.textContent = "--";
                 return;
             }
@@ -786,7 +780,6 @@
             metricChange.classList.add(delta >= 0 ? "up" : "down");
             metricHigh.textContent = "$" + high.toFixed(2);
             metricLow.textContent = "$" + low.toFixed(2);
-            metricPoints.textContent = String(prices.length);
             metricVolume.textContent = formatVolume(volume);
             metricLast.classList.remove("up", "down");
             metricLast.classList.add(delta >= 0 ? "up" : "down");
