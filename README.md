@@ -27,3 +27,8 @@ Railway deploy notes:
 - Set `DATABASE_URL` in Railway to your Postgres connection string.
 - Ensure your start command is `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 - If using Finnhub, set `FINNHUB_API_KEY` as an environment variable.
+
+Docker note (dev container):
+
+- Docker daemon does not run inside this dev container due to missing kernel privileges.
+- Use Docker Desktop on your host machine, or run locally without Docker.
