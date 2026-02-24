@@ -58,6 +58,25 @@
         font-size: 13px;
     }
 
+    .deploy-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        margin-bottom: 16px;
+        border-radius: 12px;
+        background: linear-gradient(120deg, rgba(47, 123, 255, 0.12), rgba(120, 185, 255, 0.18));
+        border: 1px solid rgba(47, 123, 255, 0.25);
+        color: #1f5fe6;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .deploy-banner span {
+        color: #3b4856;
+        font-weight: 500;
+    }
+
     .row-subline {
         display: none;
         font-size: 12px;
@@ -222,6 +241,11 @@
     {% if watchlist_cleared %}
     <div id="watchlist-cleared" class="notice notice-success">Watchlist cleared.</div>
     {% endif %}
+
+    <div class="deploy-banner">
+        Deploy check active
+        <span>Build 2026-02-24</span>
+    </div>
 
     <div class="watchlist-panel panel">
         <div id="watchlist-table" data-cache-key="watchlist-{{ current_user.id }}"
