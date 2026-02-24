@@ -16,3 +16,9 @@ Quick start (local, Postgres):
    ```
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
+
+Railway deploy notes:
+
+- Set `DATABASE_URL` in Railway to your Postgres connection string.
+- Ensure your start command is `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+- If using Finnhub, set `FINNHUB_API_KEY` as an environment variable.
