@@ -313,7 +313,7 @@
                             {{ "%+.2f"|format(item.change_pct) }}%
                         </td>
                         <td>
-                            <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">🔔</button>
+                            <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">Alert</button>
                         </td>
                     </tr>
                     {% endfor %}
