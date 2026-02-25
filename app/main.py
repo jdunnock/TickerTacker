@@ -304,6 +304,12 @@ async def build_watchlist_with_prices(
             {
                 "id": item.id,
                 "instrument": item.instrument,
+                "alert_upper": float(item.alert_upper)
+                if item.alert_upper is not None
+                else None,
+                "alert_lower": float(item.alert_lower)
+                if item.alert_lower is not None
+                else None,
                 "last": last,
                 "last_close": last_close,
                 "change_pct": change_pct,

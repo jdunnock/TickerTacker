@@ -203,6 +203,22 @@
         transform: scale(1.1);
     }
 
+    .alert-values {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.75);
+    }
+
+    .alert-chip {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        padding: 2px 6px;
+        white-space: nowrap;
+    }
+
     @media (max-width: 600px) {
         .dashboard-header {
             align-items: flex-start;
@@ -313,7 +329,17 @@
                             {{ "%+.2f"|format(item.change_pct) }}%
                         </td>
                         <td>
-                            <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">Alert</button>
+                            <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">🔔</button>
+                            {% if item.alert_upper or item.alert_lower %}
+                            <div class="alert-values">
+                                {% if item.alert_upper %}
+                                <span class="alert-chip">U: ${{ "%.2f"|format(item.alert_upper) }}</span>
+                                {% endif %}
+                                {% if item.alert_lower %}
+                                <span class="alert-chip">L: ${{ "%.2f"|format(item.alert_lower) }}</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

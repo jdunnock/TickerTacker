@@ -43,7 +43,17 @@
                 {{ "%+.2f"|format(item.change_pct) }}%
             </td>
             <td>
-                <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">Alert</button>
+                <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">🔔</button>
+                {% if item.alert_upper or item.alert_lower %}
+                <div class="alert-values">
+                    {% if item.alert_upper %}
+                    <span class="alert-chip">U: ${{ "%.2f"|format(item.alert_upper) }}</span>
+                    {% endif %}
+                    {% if item.alert_lower %}
+                    <span class="alert-chip">L: ${{ "%.2f"|format(item.alert_lower) }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
