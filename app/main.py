@@ -658,6 +658,70 @@ def clear_watchlist(request: Request, db: Session = Depends(get_db)):
     return response
 
 
+@app.post("/api/watchlist/{watchlist_id}/set-alert")
+def set_alert(
+    watchlist_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    alert_upper: float | None = Form(None),
+    alert_lower: float | None = Form(None),
+):
+    """Set price alert thresholds for a watchlist item."""
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    
+    item = db.query(Watchlist).filter(
+        Watchlist.id == watchlist_id,
+        Watchlist.owner == current_user.id
+    ).first()
+    
+    if not item:
+        return JSONResponse({"detail": "Not found"}, status_code=404)
+    
+    # Validate thresholds
+    if alert_upper is not None and alert_lower is not None:
+        if alert_lower >= alert_upper:
+            return JSONResponse(
+                {"detail": "Lower threshold must be less than upper threshold"},
+                status_code=400
+            )
+    
+    item.alert_upper = alert_upper
+    item.alert_lower = alert_lower
+    item.alert_triggered = False  # Reset trigger on new alert
+    db.commit()
+    
+    return JSONResponse({"success": True, "alert_upper": alert_upper, "alert_lower": alert_lower})
+
+
+@app.post("/api/watchlist/{watchlist_id}/clear-alert")
+def clear_alert(
+    watchlist_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Clear price alerts for a watchlist item."""
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    
+    item = db.query(Watchlist).filter(
+        Watchlist.id == watchlist_id,
+        Watchlist.owner == current_user.id
+    ).first()
+    
+    if not item:
+        return JSONResponse({"detail": "Not found"}, status_code=404)
+    
+    item.alert_upper = None
+    item.alert_lower = None
+    item.alert_triggered = False
+    db.commit()
+    
+    return JSONResponse({"success": True})
+
+
 @app.get("/api/prices/history")
 async def price_history(
     request: Request, symbol: str, range: str = "6m", db: Session = Depends(get_db)
