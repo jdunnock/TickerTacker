@@ -187,6 +187,22 @@
         animation: lastPulse 1.2s ease;
     }
 
+    .btn-alert {
+        background: rgba(255, 193, 7, 0.15);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.2s;
+    }
+
+    .btn-alert:hover {
+        background: rgba(255, 193, 7, 0.25);
+        border-color: rgba(255, 193, 7, 0.5);
+        transform: scale(1.1);
+    }
+
     @media (max-width: 600px) {
         .dashboard-header {
             align-items: flex-start;
@@ -260,6 +276,7 @@
                         <th class="col-last">Last</th>
                         <th class="col-close">Last Close</th>
                         <th class="col-change">1D Change (%)</th>
+                        <th>Alerts</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -294,6 +311,9 @@
                         <td class="col-close">${{ "%.2f"|format(item.last_close) }}</td>
                         <td class="col-change {% if item.change_pct >= 0 %}up{% else %}down{% endif %}">
                             {{ "%+.2f"|format(item.change_pct) }}%
+                        </td>
+                        <td>
+                            <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">🔔</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -387,6 +407,39 @@
         });
 
         restoreCache();
+        
+        // Alert management
+        window.setAlert = function(itemId, symbol) {
+            var upper = prompt(`Set upper alert for ${symbol} (leave empty to skip):`);
+            var lower = prompt(`Set lower alert for ${symbol} (leave empty to skip):`);
+            
+            if (!upper && !lower) {
+                if (confirm(`Clear all alerts for ${symbol}?`)) {
+                    fetch(`/api/watchlist/${itemId}/clear-alert`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    }).then(r => r.json()).then(data => {
+                        alert('Alert cleared!');
+                    });
+                }
+                return;
+            }
+            
+            var formData = new FormData();
+            if (upper) formData.append('alert_upper', upper);
+            if (lower) formData.append('alert_lower', lower);
+            
+            fetch(`/api/watchlist/${itemId}/set-alert`, {
+                method: 'POST',
+                body: formData
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    alert(`Alert set! Upper: ${data.alert_upper || 'none'}, Lower: ${data.alert_lower || 'none'}`);
+                } else {
+                    alert(`Error: ${data.detail || 'Unknown error'}`);
+                }
+            });
+        };
     })();
 </script>
 {% endblock %}
