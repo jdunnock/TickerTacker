@@ -302,6 +302,7 @@ async def build_watchlist_with_prices(
 
         watchlist_with_prices.append(
             {
+                "id": item.id,
                 "instrument": item.instrument,
                 "last": last,
                 "last_close": last_close,
