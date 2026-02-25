@@ -7,6 +7,7 @@
             <th class="col-last">Last</th>
             <th class="col-close">Last Close</th>
             <th class="col-change">1D Change (%)</th>
+            <th>Alerts</th>
         </tr>
     </thead>
     <tbody>
@@ -40,6 +41,9 @@
             <td class="col-close">${{ "%.2f"|format(item.last_close) }}</td>
             <td class="col-change {% if item.change_pct >= 0 %}up{% else %}down{% endif %}">
                 {{ "%+.2f"|format(item.change_pct) }}%
+            </td>
+            <td>
+                <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">Alert</button>
             </td>
         </tr>
         {% endfor %}
