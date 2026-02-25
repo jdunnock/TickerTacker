@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import DateTime, Integer, String, ForeignKey, Numeric, BigInteger, func
+from sqlalchemy import DateTime, Integer, String, ForeignKey, Numeric, BigInteger, Boolean, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
 
@@ -52,6 +52,9 @@ class Watchlist(Base):
     )
     owner: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     added_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    alert_upper: Mapped[float | None] = mapped_column(Numeric(20, 6), nullable=True)
+    alert_lower: Mapped[float | None] = mapped_column(Numeric(20, 6), nullable=True)
+    alert_triggered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     instrument: Mapped[Instrument] = relationship("Instrument")
 

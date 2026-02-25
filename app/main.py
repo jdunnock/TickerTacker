@@ -17,9 +17,13 @@ from app.providers.finnhub import FinnhubProvider
 from app.providers.stocktwits import StocktwitsProvider
 from app.services.pricing import PricingService
 from app.utils import hash_password, verify_password
+from app.init_alerts import ensure_alert_columns
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+# Ensure alert columns exist
+ensure_alert_columns()
 
 app = FastAPI()
 
