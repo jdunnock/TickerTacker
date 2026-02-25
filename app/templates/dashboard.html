@@ -331,17 +331,19 @@
                             {{ "%+.2f"|format(item.change_pct) }}%
                         </td>
                         <td>
-                            <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">🔔</button>
-                            {% if item.alert_upper or item.alert_lower %}
-                            <div class="alert-values">
-                                {% if item.alert_upper %}
-                                <span class="alert-chip">U: ${{ "%.2f"|format(item.alert_upper) }}</span>
+                            <div class="alert-cell">
+                                {% if item.alert_upper or item.alert_lower %}
+                                <div class="alert-values">
+                                    {% if item.alert_upper %}
+                                    <span class="alert-chip alert-chip-upper">U: ${{ "%.2f"|format(item.alert_upper) }}</span>
+                                    {% endif %}
+                                    {% if item.alert_lower %}
+                                    <span class="alert-chip alert-chip-lower">L: ${{ "%.2f"|format(item.alert_lower) }}</span>
+                                    {% endif %}
+                                </div>
                                 {% endif %}
-                                {% if item.alert_lower %}
-                                <span class="alert-chip">L: ${{ "%.2f"|format(item.alert_lower) }}</span>
-                                {% endif %}
+                                <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">🔔</button>
                             </div>
-                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
