@@ -313,7 +313,7 @@
                             {{ "%+.2f"|format(item.change_pct) }}%
                         </td>
                         <td>
-                            <button class="btn-alert" onclick="return setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">Alert</button>
+                            <button class="btn-alert" onclick="setAlert({{ item.id }}, '{{ item.instrument.symbol }}')">Alert</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -389,6 +389,10 @@
 
         if (tableContainer) {
             tableContainer.addEventListener("click", function (event) {
+                // Don't navigate if clicking on alert button
+                if (event.target.closest(".btn-alert")) {
+                    return;
+                }
                 var row = event.target.closest(".watchlist-row");
                 if (!row) {
                     return;
@@ -422,7 +426,7 @@
                         alert('Alert cleared!');
                     });
                 }
-                return false;
+                return;
             }
             
             var formData = new FormData();
@@ -439,7 +443,6 @@
                     alert(`Error: ${data.detail || 'Unknown error'}`);
                 }
             });
-            return false;
         };
     })();
 </script>
