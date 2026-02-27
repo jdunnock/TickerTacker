@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "tickertacker": {
+      "command": "/workspace/.venv/bin/python",
+      "args": ["-m", "app.mcp_server"],
+      "cwd": "/workspace",
+      "env": {
+        "DATABASE_URL": "postgresql+psycopg://app:app@localhost:5432/tickers"
+      }
+    }
+  }
+}

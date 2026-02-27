@@ -1,0 +1,39 @@
+MCP quickstart
+
+1) Start server (VS Code terminal):
+/workspace/.venv/bin/python -m app.mcp_server
+
+Claude Desktop (macOS) auto-setup:
+
+1) Run this in Mac terminal at repo root:
+python3 scripts/setup_claude_mcp.py
+2) Restart Claude Desktop.
+3) You should see MCP server name: tickertacker.
+
+2) Copy one of these JSON configs into your MCP client config:
+- mcp-client-config.example.json (devcontainer paths)
+- mcp-client-config.mac.example.json (Mac paths, edit YOUR_USER + path)
+
+3) First useful tool calls:
+- list_watchlist(owner="<user_id>")
+- get_quote(symbol="AAPL")
+- latest_close_from_db(symbol="AAPL")
+- set_alert(owner="<user_id>", symbol="AAPL", upper=230)
+- clear_alert(owner="<user_id>", symbol="AAPL")
+
+VS Code terminal demo (no Claude Desktop needed):
+
+- List tools:
+	/workspace/.venv/bin/python scripts/mcp_demo_client.py list-tools
+- Get quote:
+	/workspace/.venv/bin/python scripts/mcp_demo_client.py quote --symbol AAPL
+- Read watchlist:
+	/workspace/.venv/bin/python scripts/mcp_demo_client.py watchlist --owner <user_id>
+- Auto-find first owner:
+	/workspace/.venv/bin/python scripts/mcp_demo_client.py owner
+- Set alert:
+	/workspace/.venv/bin/python scripts/mcp_demo_client.py set-alert --owner <user_id> --symbol AAPL --upper 230 --lower 200
+- One-command scenario (quote -> set-alert -> watchlist):
+	/workspace/.venv/bin/python scripts/mcp_demo_client.py scenario --owner <user_id> --symbol AAPL --upper 230 --lower 200
+- One-command scenario with auto owner:
+	/workspace/.venv/bin/python scripts/mcp_demo_client.py scenario --symbol AAPL --upper 230 --lower 200

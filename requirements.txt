@@ -13,3 +13,4 @@ passlib[bcrypt]
 ruff
 pytest
 httpx
+mcp

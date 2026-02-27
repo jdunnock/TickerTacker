@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "tickertacker": {
+      "command": "/Users/YOUR_USER/path/to/TickerTacker/.venv/bin/python",
+      "args": ["-m", "app.mcp_server"],
+      "cwd": "/Users/YOUR_USER/path/to/TickerTacker",
+      "env": {
+        "DATABASE_URL": "postgresql+psycopg://app:app@localhost:5432/tickers"
+      }
+    }
+  }
+}
